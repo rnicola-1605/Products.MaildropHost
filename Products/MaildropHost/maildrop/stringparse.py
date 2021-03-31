@@ -43,13 +43,16 @@ like::
     smtp_use_tls=False
     smtp_username=None
     smtp_password=None
-    message_template='This is a template for the message\nthat goes over multiple lineswith a continuation'
+    message_template='This is a template for the message\nthat goes over
+    multiple lineswith a continuation'
 
 $Id: stringparse.py 1696 2009-02-08 08:22:06Z jens $
 """
 
-from io import StringIO
+# from io import StringIO
+from io import BytesIO
 import tokenize
+
 
 class ParserSyntaxError(SyntaxError):
     """
@@ -57,16 +60,19 @@ class ParserSyntaxError(SyntaxError):
     including statements that are outside the limited scope of things
     that this will parse.
     """
+
     def __init__(self, message, start, end):
         SyntaxError.__init__(self, message)
         self.message = message
         self.start = start
         self.end = end
+
     def __str__(self):
         return '%s at line %s' % (self.message, self.start[0])
 
+
 def parse_assignments(source):
-    tokens = tokenize.generate_tokens(StringIO(source).readline)
+    tokens = tokenize.generate_tokens(BytesIO(source).readline)
     assignments = []
     state = 'need_variable'
     variable_name = None
@@ -79,19 +85,21 @@ def parse_assignments(source):
             continue
         if token_type == tokenize.ENDMARKER:
             break
-        if (state == 'need_value' and token_type == tokenize.NAME 
-            and token_string in ('True', 'False', 'None')):
+        if (state == 'need_value' and token_type == tokenize.NAME
+                and token_string in ('True', 'False', 'None')):
             token_type = 'SPECIAL_VALUE'
         if token_type == tokenize.NAME:
             if state != 'need_variable':
-                raise ParserSyntaxError("Variable not expected (got %s)" % token_string,
-                                        start, end)
+                raise ParserSyntaxError(
+                    "Variable not expected (got %s)" % token_string,
+                    start, end)
             variable_name = token_string
             state = 'need_assignment'
         if token_type == tokenize.OP:
             if token_string != '=':
-                raise ParserSyntaxError("Only assignments are allowed (got operator %s)" % token_string,
-                                        start, end)
+                raise ParserSyntaxError(
+                    "Only assignments are allowed (got operator %s)" %
+                    token_string, start, end)
             if state != 'need_assignment':
                 raise ParserSyntaxError("Assignment not expected", start, end)
             state = 'need_value'
@@ -121,16 +129,22 @@ def parse_assignments(source):
                 else:
                     value = int(token_string)
             else:
-                raise ParserSyntaxError("Unknown value type: %s" % token_string, start, end)
+                raise ParserSyntaxError(
+                    "Unknown value type: %s" % token_string, start, end)
             if not state == 'need_value':
-                raise ParserSyntaxError("Value not expected (got value %s)" % token_string, start, end)
+                raise ParserSyntaxError(
+                    "Value not expected (got value %s)" %
+                    token_string, start, end)
             assert variable_name
             assignments.append((variable_name, value))
             variable_name = None
             state = 'need_variable'
     if state != 'need_variable':
-        raise ParserSyntaxError("Unfinished assignment (of variable %s)" % variable_name, start, end)
+        raise ParserSyntaxError(
+            "Unfinished assignment (of variable %s)" %
+            variable_name, start, end)
     return assignments
+
 
 def parse_string(s, start, end):
     """
@@ -156,7 +170,7 @@ def parse_string(s, start, end):
     if unquote:
         s = s  # .decode('string_escape')
     if str:
-        ## FIXME: what encoding would it be?
+        # FIXME: what encoding would it be?
         s = s  # .decode('unicode_escape')
     return s
 
